@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(done)",
+      "Bash(poetry --version)",
+      "Bash(sqlite3:*)",
+      "Bash(pip install:*)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(worldvue:*)",
+      "Bash(printf \"y\\ny\\n\")",
+      "Bash(printf \"y\\n\")",
+      "Bash(set PYTHONIOENCODING=utf-8)",
+      "Bash(findstr:*)",
+      "Bash(dir artifacts)",
+      "Bash(dir:*)",
+      "Bash(set RUN_DIR=artifacts_run_20250927_140930_optimized_no_ties)",
+      "Bash(find:*)",
+      "Bash(set PYTHONPATH=C:worldviewaiworldvuesrc)",
+      "Bash(rm:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(git reset:*)",
+      "Bash(awk:*)",
+      "Bash(git push:*)",
+      "Bash(git config:*)",
+      "Bash(git fsck:*)",
+      "Bash(git gc:*)",
+      "Bash(grep:*)",
+      "Bash(git commit:*)",
+      "Bash(git count-objects:*)",
+      "Bash(git reflog:*)",
+      "Bash(git init:*)",
+      "Bash(git remote add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

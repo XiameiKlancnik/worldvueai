@@ -1,0 +1,32 @@
+seed: 42
+
+# Article sampling - PREVIEW MODE (tiny budget for testing)
+max_articles_global: 600          # tiny for testing
+max_articles_per_country: 30      # cap to spread breadth
+country_whitelist: []             # optional subset; empty = all
+cluster_min_size: 4               # clusters smaller than this are skipped
+
+# Pair sampling - PREVIEW MODE
+target_pairs_total: 1000          # tiny for testing
+cross_country_ratio: 0.40         # 60% within, 40% cross-country
+pairs_per_cluster_min: 5
+pairs_per_cluster_max: 20
+max_pairs_per_article: 8          # target "degree" for BT solver
+balance_by_outlet: true
+
+# LLM judging
+votes_per_pair: 3
+truncate_chars_per_side: 1200     # headline + 2–3 grafs
+pivot_language: "en"              # translate both sides to this for judging
+use_translation: true
+entity_masking: true
+
+# Cost estimator
+price_per_mtoken_usd: 0.15
+tokens_per_call_estimate: 1000    # conservative; used for planning
+dry_run: true                     # preview mode uses dry run by default
+
+# Scoring/calibration
+scoring_method: "anchors"         # "anchors" | "bt_offsets"
+anchors_per_axis: 5               # fewer anchors for preview
+country_isotonic_calibration: true

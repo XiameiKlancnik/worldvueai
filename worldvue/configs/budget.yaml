@@ -1,0 +1,25 @@
+# WorldVue Budget Configuration - BIG RUN SETTINGS for 25K articles
+anchors_per_axis: 7
+balance_by_outlet: true
+cluster_min_size: 8
+country_isotonic_calibration: true
+country_whitelist: []
+cross_country_ratio: 0.4
+dry_run: false
+entity_masking: true
+max_articles_global: 25000  # Use more of your 25K articles
+max_articles_per_country: 150  # Scale up per country
+max_pairs_per_article: 8  # Still reasonable coverage
+pairs_per_cluster_max: 100  # More pairs per cluster for better training
+pairs_per_cluster_min: 20  # Higher minimum for stability
+pivot_language: en
+price_per_mtoken_usd: 0.15  # GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output
+scoring_method: anchors
+seed: 42
+target_pairs_total: 10000  # BIG RUN - maximum training data
+tokens_per_call_estimate: 800  # Reduced due to shorter prompts
+truncate_chars_per_side: 1500  # Good context length
+use_cheaper_model: true  # Use gpt-4o-mini (cheapest option)
+use_multi_axis_judging: true  # 5x cost savings - judge all axes at once
+use_translation: true
+votes_per_pair: 1  # Single vote since we eliminated ties

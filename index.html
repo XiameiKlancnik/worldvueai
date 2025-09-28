@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>WorldVue AI - Global Media Perspective Visualizer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Explore how different countries frame the same news topics. See media bias and narrative differences across the globe.">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body, #map {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #000;
+    }
+
+    /* Force black background on map */
+    #map {
+      background: #000 !important;
+    }
+
+    /* Dark map container */
+    .leaflet-container {
+      background: #000 !important;
+    }
+
+    /* Hide tile pane completely for pure black */
+    .leaflet-tile-pane {
+      display: none !important;
+    }
+
+    /* Ensure overlay pane is visible */
+    .leaflet-overlay-pane {
+      display: block !important;
+    }
+
+    /* Search Panel - Dark Mode */
+    .search-panel {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 12px 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 150, 255, 0.1);
+      z-index: 1000;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .search-panel input {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 8px 12px;
+      width: 260px;
+      font-size: 14px;
+      transition: all 0.3s;
+      color: #fff;
+    }
+
+    .search-panel input::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .search-panel input:focus {
+      outline: none;
+      border-color: #00a8ff;
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: 0 0 20px rgba(0, 168, 255, 0.3);
+    }
+
+    .search-panel button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #0096ff, #00d4ff);
+      color: white;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-size: 14px;
+      box-shadow: 0 2px 10px rgba(0, 150, 255, 0.3);
+    }
+
+    .search-panel button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px rgba(0, 150, 255, 0.5);
+      background: linear-gradient(135deg, #00b4ff, #00e4ff);
+    }
+
+    /* Trending Topics Panel */
+    .trending-panel {
+      position: absolute;
+      top: 70px;
+      left: 16px;
+      max-width: 600px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 150, 255, 0.1);
+      z-index: 999;
+      backdrop-filter: blur(10px);
+    }
+
+    .trending-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .trending-icon {
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+    }
+
+    .trending-topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .topic-chip {
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .topic-chip:hover {
+      background: rgba(0, 168, 255, 0.2);
+      border-color: rgba(0, 168, 255, 0.4);
+      color: #00d4ff;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 168, 255, 0.3);
+    }
+
+    .topic-chip.hot {
+      border-color: rgba(255, 107, 107, 0.3);
+      background: rgba(255, 107, 107, 0.1);
+    }
+
+    .topic-chip.hot:hover {
+      background: rgba(255, 107, 107, 0.2);
+      border-color: rgba(255, 107, 107, 0.5);
+      color: #ff6b6b;
+    }
+
+    .topic-count {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 10px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Analytics Panel - Global Overview */
+    .analytics-panel {
+      position: absolute;
+      bottom: 60px;
+      left: 16px;
+      width: 380px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 150, 255, 0.1);
+      z-index: 998;
+      backdrop-filter: blur(10px);
+      display: none;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .analytics-panel.show {
+      display: block;
+    }
+
+    .analytics-header {
+      font-size: 13px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.8);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Global Distribution Chart */
+    .distribution-chart {
+      margin-bottom: 16px;
+    }
+
+    .distribution-bars {
+      display: flex;
+      align-items: flex-end;
+      height: 60px;
+      gap: 4px;
+      margin-bottom: 8px;
+    }
+
+    .dist-bar {
+      flex: 1;
+      background: linear-gradient(to top, rgba(0, 168, 255, 0.6), rgba(0, 212, 255, 0.3));
+      border-radius: 2px 2px 0 0;
+      position: relative;
+      min-height: 4px;
+      transition: all 0.3s;
+    }
+
+    .dist-bar:hover {
+      background: linear-gradient(to top, rgba(0, 168, 255, 0.8), rgba(0, 212, 255, 0.5));
+    }
+
+    .dist-bar.left-strong {
+      background: linear-gradient(to top, #0066cc, #0088ff);
+    }
+
+    .dist-bar.left {
+      background: linear-gradient(to top, #0088ff, #00aaff);
+    }
+
+    .dist-bar.neutral {
+      background: linear-gradient(to top, rgba(150, 150, 150, 0.4), rgba(200, 200, 200, 0.2));
+    }
+
+    .dist-bar.right {
+      background: linear-gradient(to top, #ff6666, #ff8888);
+    }
+
+    .dist-bar.right-strong {
+      background: linear-gradient(to top, #cc0000, #ff3333);
+    }
+
+    .dist-count {
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      white-space: nowrap;
+    }
+
+    .distribution-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Coverage Summary */
+    .coverage-summary {
+      padding: 12px;
+      background: rgba(0, 168, 255, 0.05);
+      border: 1px solid rgba(0, 168, 255, 0.1);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .summary-text {
+      font-size: 13px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .summary-highlight {
+      color: #00d4ff;
+      font-weight: 600;
+    }
+
+    /* Keyword Cloud */
+    .keyword-cloud {
+      margin-bottom: 16px;
+    }
+
+    .keyword-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      min-height: 80px;
+    }
+
+    .keyword {
+      padding: 4px 8px;
+      background: rgba(0, 168, 255, 0.1);
+      border: 1px solid rgba(0, 168, 255, 0.2);
+      border-radius: 12px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      transition: all 0.3s;
+      cursor: default;
+    }
+
+    .keyword.large {
+      font-size: 14px;
+      font-weight: 600;
+      color: #00d4ff;
+      background: rgba(0, 168, 255, 0.15);
+    }
+
+    .keyword.medium {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    .keyword:hover {
+      background: rgba(0, 168, 255, 0.3);
+      transform: scale(1.05);
+    }
+
+    /* Info Panel - Dark Mode */
+    .info-panel {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 380px;
+      max-width: 90vw;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 40px rgba(0, 150, 255, 0.1);
+      padding: 16px;
+      z-index: 1000;
+      max-height: 80vh;
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+      color: #fff;
+    }
+
+    /* Custom scrollbar for dark mode */
+    .info-panel::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .info-panel::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+    }
+
+    .info-panel::-webkit-scrollbar-thumb {
+      background: rgba(0, 168, 255, 0.5);
+      border-radius: 4px;
+    }
+
+    .info-panel::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 168, 255, 0.7);
+    }
+
+    .info-panel h2 {
+      font-size: 18px;
+      margin-bottom: 8px;
+      color: #00d4ff;
+      text-shadow: 0 0 20px rgba(0, 212, 255, 0.5);
+    }
+
+    .info-panel .subtitle {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .country-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .country-name {
+      font-size: 20px;
+      font-weight: 600;
+      color: #fff;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    }
+
+    .tilt-badge {
+      padding: 4px 10px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .tilt-left-strong {
+      background: linear-gradient(135deg, #0066cc, #0088ff);
+      color: white;
+      box-shadow: 0 2px 10px rgba(0, 100, 255, 0.4);
+    }
+    .tilt-left {
+      background: linear-gradient(135deg, #0088ff, #00aaff);
+      color: white;
+      box-shadow: 0 2px 10px rgba(0, 150, 255, 0.3);
+    }
+    .tilt-neutral {
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .tilt-right {
+      background: linear-gradient(135deg, #ff6666, #ff8888);
+      color: white;
+      box-shadow: 0 2px 10px rgba(255, 100, 100, 0.3);
+    }
+    .tilt-right-strong {
+      background: linear-gradient(135deg, #cc0000, #ff3333);
+      color: white;
+      box-shadow: 0 2px 10px rgba(255, 0, 0, 0.4);
+    }
+
+    /* Enhanced Country Analysis */
+    .outlets-section {
+      margin: 16px 0;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .outlets-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .outlet-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .outlet-name {
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .outlet-count {
+      background: rgba(0, 168, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      color: #00a8ff;
+    }
+
+    /* Country Bias Distribution */
+    .country-distribution {
+      margin: 16px 0;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .country-dist-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .country-dist-bars {
+      display: flex;
+      align-items: flex-end;
+      height: 50px;
+      gap: 3px;
+      margin-bottom: 6px;
+    }
+
+    .country-dist-bar {
+      flex: 1;
+      background: linear-gradient(to top, rgba(0, 168, 255, 0.4), rgba(0, 212, 255, 0.2));
+      border-radius: 2px 2px 0 0;
+      position: relative;
+      min-height: 3px;
+      transition: all 0.3s;
+    }
+
+    .country-dist-bar:hover {
+      filter: brightness(1.3);
+    }
+
+    .country-dist-bar.left-strong {
+      background: linear-gradient(to top, #0066cc, #0088ff);
+    }
+
+    .country-dist-bar.left {
+      background: linear-gradient(to top, #0088ff, #00aaff);
+    }
+
+    .country-dist-bar.neutral {
+      background: linear-gradient(to top, rgba(150, 150, 150, 0.4), rgba(200, 200, 200, 0.2));
+    }
+
+    .country-dist-bar.right {
+      background: linear-gradient(to top, #ff6666, #ff8888);
+    }
+
+    .country-dist-bar.right-strong {
+      background: linear-gradient(to top, #cc0000, #ff3333);
+    }
+
+    .country-dist-value {
+      position: absolute;
+      top: -16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.6);
+      white-space: nowrap;
+    }
+
+    .country-dist-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .polarization-indicator {
+      margin-top: 8px;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.7);
+      text-align: center;
+    }
+
+    .polarization-indicator.unified {
+      border-color: rgba(0, 255, 100, 0.2);
+      background: rgba(0, 255, 100, 0.05);
+      color: rgba(100, 255, 150, 0.9);
+    }
+
+    .polarization-indicator.moderate {
+      border-color: rgba(255, 200, 0, 0.2);
+      background: rgba(255, 200, 0, 0.05);
+      color: rgba(255, 200, 50, 0.9);
+    }
+
+    .polarization-indicator.polarized {
+      border-color: rgba(255, 100, 100, 0.2);
+      background: rgba(255, 100, 100, 0.05);
+      color: rgba(255, 150, 150, 0.9);
+    }
+
+    .frames-section {
+      margin: 16px 0;
+    }
+
+    .frames-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .frame-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 13px;
+    }
+
+    .frame-label {
+      width: 100px;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 12px;
+    }
+
+    .frame-bar-container {
+      flex: 1;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .frame-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #00a8ff, #00d4ff);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+      box-shadow: inset 0 0 10px rgba(0, 200, 255, 0.3);
+    }
+
+    .frame-percent {
+      margin-left: 8px;
+      font-weight: 600;
+      color: #00d4ff;
+      min-width: 35px;
+      text-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+    }
+
+    .headlines-section {
+      margin-top: 16px;
+    }
+
+    .headlines-title {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .headline-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .headline-item:last-child {
+      border-bottom: none;
+    }
+
+    .headline-link {
+      color: #00a8ff;
+      text-decoration: none;
+      font-size: 13px;
+      line-height: 1.4;
+      display: block;
+      transition: color 0.3s;
+    }
+
+    .headline-link:hover {
+      color: #00d4ff;
+      text-decoration: underline;
+      text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+
+    /* Legend - Dark Mode */
+    .legend {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      background: rgba(15, 15, 20, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 14px;
+      border-radius: 10px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 150, 255, 0.1);
+      z-index: 997;
+      backdrop-filter: blur(10px);
+    }
+
+    .legend-title {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .legend-scale {
+      display: flex;
+      gap: 2px;
+      margin-bottom: 4px;
+    }
+
+    .legend-item {
+      width: 32px;
+      height: 14px;
+      border-radius: 2px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .legend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Loading State - Dark Mode */
+    .loading {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 15, 20, 0.98);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7), 0 0 40px rgba(0, 150, 255, 0.2);
+      z-index: 2000;
+      backdrop-filter: blur(10px);
+    }
+
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top: 3px solid #00a8ff;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 12px;
+      box-shadow: 0 0 20px rgba(0, 168, 255, 0.5);
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Loading text */
+    .loading div:last-child {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    /* No data state */
+    .no-data {
+      padding: 20px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.5);
+      font-size: 14px;
+    }
+
+    .article-count {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 4px;
+    }
+
+    /* How it works link */
+    .how-it-works {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+    }
+
+    .how-it-works a {
+      color: rgba(0, 168, 255, 0.8);
+      font-size: 12px;
+      text-decoration: none;
+      transition: all 0.3s;
+    }
+
+    .how-it-works a:hover {
+      color: #00d4ff;
+      text-decoration: underline;
+      text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+    }
+
+    /* Leaflet controls dark mode */
+    .leaflet-control-zoom {
+      background: rgba(15, 15, 20, 0.9) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+    }
+
+    .leaflet-control-zoom a {
+      background: rgba(15, 15, 20, 0.9) !important;
+      color: rgba(255, 255, 255, 0.7) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .leaflet-control-zoom a:hover {
+      background: rgba(0, 168, 255, 0.2) !important;
+      color: #fff !important;
+    }
+
+    .leaflet-control-attribution {
+      background: rgba(0, 0, 0, 0.7) !important;
+      color: rgba(255, 255, 255, 0.4) !important;
+      font-size: 10px !important;
+    }
+
+    .leaflet-control-attribution a {
+      color: rgba(0, 168, 255, 0.6) !important;
+    }
+
+    /* Tooltip dark mode */
+    .leaflet-tooltip {
+      background: rgba(15, 15, 20, 0.95) !important;
+      border: 1px solid rgba(0, 168, 255, 0.3) !important;
+      color: #fff !important;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 168, 255, 0.2) !important;
+      backdrop-filter: blur(5px);
+    }
+
+    .leaflet-tooltip-left:before {
+      border-left-color: rgba(0, 168, 255, 0.3) !important;
+    }
+
+    .leaflet-tooltip-right:before {
+      border-right-color: rgba(0, 168, 255, 0.3) !important;
+    }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      .search-panel {
+        left: 10px;
+        top: 10px;
+        right: 10px;
+        width: auto;
+      }
+
+      .search-panel input {
+        width: 100%;
+        flex: 1;
+      }
+
+      .trending-panel {
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        top: 60px;
+      }
+
+      .analytics-panel {
+        left: 10px;
+        right: 10px;
+        width: auto;
+        bottom: 120px;
+        max-height: 300px;
+      }
+
+      .info-panel {
+        right: 10px;
+        left: 10px;
+        width: auto;
+        top: 150px;
+        max-height: 30vh;
+      }
+
+      .legend {
+        right: 10px;
+        bottom: 70px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+
+  <div class="search-panel">
+    <input type="text" id="searchInput" placeholder="Search topic (e.g., climate protests, elections)" autocomplete="off">
+    <button id="searchBtn">Search</button>
+  </div>
+
+  <div class="trending-panel" id="trendingPanel">
+    <div class="trending-header">
+      <div class="trending-icon">🔥</div>
+      <span>Trending Global Topics</span>
+    </div>
+    <div class="trending-topics" id="trendingTopics">
+      <!-- Topics will be loaded here -->
+    </div>
+  </div>
+
+  <!-- Global Analytics Panel -->
+  <div class="analytics-panel" id="analyticsPanel">
+    <div class="analytics-header">Global Coverage Analysis</div>
+
+    <!-- Coverage Summary -->
+    <div class="coverage-summary" id="coverageSummary">
+      <div class="summary-text">
+        Select a topic to see global coverage analysis
+      </div>
+    </div>
+
+    <!-- Global Bias Distribution -->
+    <div class="distribution-chart">
+      <div class="analytics-header" style="font-size: 12px; margin-bottom: 8px;">Bias Distribution</div>
+      <div class="distribution-bars" id="distributionBars">
+        <!-- Bars will be generated here -->
+      </div>
+      <div class="distribution-labels">
+        <span>Far Left</span>
+        <span>Left</span>
+        <span>Neutral</span>
+        <span>Right</span>
+        <span>Far Right</span>
+      </div>
+    </div>
+
+    <!-- Keyword Cloud -->
+    <div class="keyword-cloud">
+      <div class="analytics-header" style="font-size: 12px; margin-bottom: 8px;">Key Terms</div>
+      <div class="keyword-container" id="keywordCloud">
+        <!-- Keywords will be generated here -->
+      </div>
+    </div>
+  </div>
+
+  <div class="info-panel" id="infoPanel">
+    <h2>WorldVue AI</h2>
+    <div class="subtitle">Global Media Perspective Intelligence</div>
+    <div id="panelContent">
+      <p style="color: rgba(255, 255, 255, 0.7); font-size: 14px; line-height: 1.5;">
+        Search any topic to see how different countries frame the same story.
+        Click on countries to view detailed bias analysis and sample headlines.
+      </p>
+      <p style="color: rgba(255, 255, 255, 0.4); font-size: 13px; margin-top: 12px;">
+        Loading global news data...
+      </p>
+    </div>
+    <div class="how-it-works">
+      <a href="#" onclick="showMethodology(); return false;">How we calculate bias →</a>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">Media Tilt</div>
+    <div class="legend-scale">
+      <div class="legend-item" style="background: linear-gradient(90deg, #0066cc, #0088ff);"></div>
+      <div class="legend-item" style="background: linear-gradient(90deg, #0088ff, #00aaff);"></div>
+      <div class="legend-item" style="background: rgba(255, 255, 255, 0.1);"></div>
+      <div class="legend-item" style="background: linear-gradient(90deg, #ff6666, #ff8888);"></div>
+      <div class="legend-item" style="background: linear-gradient(90deg, #cc0000, #ff3333);"></div>
+    </div>
+    <div class="legend-labels">
+      <span>← Left</span>
+      <span>Neutral</span>
+      <span>Right →</span>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+    <div>Loading data...</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Initialize map
+    const map = L.map('map', {
+      center: [20, 0],
+      zoom: 2.5,
+      minZoom: 2,
+      maxZoom: 8,
+      worldCopyJump: false,
+      preferCanvas: true
+    });
+
+    // Prevent infinite world scrolling
+    map.setMaxBounds([[-90, -180], [90, 180]]);
+
+    // Global variables
+    let geoJsonLayer = null;
+    let currentData = null;
+    let currentTopic = '';
+
+    // Enhanced color mapping for dark theme
+    function getTiltColor(tilt) {
+      if (tilt === null || tilt === undefined) return 'rgba(100, 100, 100, 0.3)';
+      if (tilt <= -0.6) return '#0066cc';
+      if (tilt <= -0.2) return '#0099ff';
+      if (tilt < 0.2) return 'rgba(150, 150, 150, 0.4)';
+      if (tilt < 0.6) return '#ff6666';
+      return '#cc0000';
+    }
+
+    // Get tilt label
+    function getTiltLabel(tilt) {
+      if (tilt === null || tilt === undefined) return 'No data';
+      if (tilt <= -0.6) return 'Strong left';
+      if (tilt <= -0.2) return 'Lean left';
+      if (tilt < 0.2) return 'Neutral';
+      if (tilt < 0.6) return 'Lean right';
+      return 'Strong right';
+    }
+
+    // Get tilt badge class
+    function getTiltBadgeClass(tilt) {
+      if (tilt === null || tilt === undefined) return 'tilt-neutral';
+      if (tilt <= -0.6) return 'tilt-left-strong';
+      if (tilt <= -0.2) return 'tilt-left';
+      if (tilt < 0.2) return 'tilt-neutral';
+      if (tilt < 0.6) return 'tilt-right';
+      return 'tilt-right-strong';
+    }
+
+    // Style function for GeoJSON
+    function getCountryStyle(feature) {
+      const iso3 = feature.properties?.ISO_A3;
+      const countryData = currentData?.countries?.[iso3];
+      const fillColor = getTiltColor(countryData?.tilt);
+
+      const hasData = countryData && countryData.tilt !== null;
+
+      return {
+        fillColor: fillColor,
+        weight: hasData ? 1.2 : 0.5,
+        opacity: 1,
+        color: hasData ? 'rgba(0, 168, 255, 0.4)' : 'rgba(255, 255, 255, 0.1)',
+        fillOpacity: hasData ? 0.9 : 0.2
+      };
+    }
+
+    // Display country details with enhanced analytics
+    async function showCountryDetails(iso3, countryName) {
+      const data = currentData?.countries?.[iso3];
+      const panel = document.getElementById('panelContent');
+
+      if (!data) {
+        panel.innerHTML = `
+          <div class="no-data">
+            <p><strong>${countryName || iso3}</strong></p>
+            <p>No data available for this country.</p>
+            <p style="margin-top: 8px; font-size: 12px;">Try searching for a different topic or check back later.</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Fetch detailed country data
+      let detailData = null;
+      try {
+        const response = await fetch(`http://localhost:5000/api/country?code=${iso3}&q=${currentTopic}`);
+        if (response.ok) {
+          detailData = await response.json();
+        }
+      } catch (error) {
+        console.log('Could not fetch detailed data');
+      }
+
+      // Generate bias distribution for this country
+      let countryDist = {
+        farLeft: 0, left: 0, neutral: 0, right: 0, farRight: 0
+      };
+
+      if (detailData && detailData.bias_distribution) {
+        countryDist = {
+          farLeft: detailData.bias_distribution.left || 0,
+          left: Math.floor((detailData.bias_distribution.left || 0) * 0.6),
+          neutral: detailData.bias_distribution.neutral || 0,
+          right: Math.floor((detailData.bias_distribution.right || 0) * 0.6),
+          farRight: detailData.bias_distribution.right || 0
+        };
+      } else {
+        // Simulate distribution based on tilt
+        const avgTilt = data.tilt;
+        const articleCount = data.article_count || 10;
+        for (let i = 0; i < articleCount; i++) {
+          const variance = 0.3;
+          const randomTilt = avgTilt + (Math.random() - 0.5) * variance;
+          const boundedTilt = Math.max(-1, Math.min(1, randomTilt));
+
+          if (boundedTilt <= -0.6) countryDist.farLeft++;
+          else if (boundedTilt <= -0.2) countryDist.left++;
+          else if (boundedTilt < 0.2) countryDist.neutral++;
+          else if (boundedTilt < 0.6) countryDist.right++;
+          else countryDist.farRight++;
+        }
+      }
+
+      const maxCountryCount = Math.max(...Object.values(countryDist), 1);
+
+      // Calculate polarization
+      const variance = detailData?.statistics?.tilt_variance || 0.2;
+      let polarizationClass = 'unified';
+      let polarizationText = '✓ Unified coverage';
+
+      if (variance > 0.3) {
+        polarizationClass = 'polarized';
+        polarizationText = '⚠ Highly polarized coverage';
+      } else if (variance > 0.15) {
+        polarizationClass = 'moderate';
+        polarizationText = '◐ Moderate diversity';
+      }
+
+      // Calculate frames with proper percentages
+      const allFrames = detailData?.frames || data.frames || {
+        economic: 0,
+        political: 0,
+        humanitarian: 0,
+        security: 0,
+        scientific: 0,
+        scandal: 0
+      };
+
+      const frameBars = Object.entries(allFrames)
+        .sort((a, b) => b[1] - a[1])
+        .map(([frame, value]) => {
+          const percentage = Math.round(value * 100);
+          const frameLabel = frame.charAt(0).toUpperCase() + frame.slice(1);
+          const barColor = percentage > 0 ? 'background: linear-gradient(90deg, #00a8ff, #00d4ff);' : 'background: rgba(255, 255, 255, 0.03);';
+
+          return `
+            <div class="frame-item">
+              <div class="frame-label">${frameLabel}:</div>
+              <div class="frame-bar-container">
+                <div class="frame-bar" style="width: ${percentage}%; ${barColor}"></div>
+              </div>
+              <div class="frame-percent" style="${percentage === 0 ? 'color: rgba(255, 255, 255, 0.3);' : ''}">${percentage}%</div>
+            </div>
+          `;
+        }).join('');
+
+      // Create outlets HTML
+      const outlets = detailData?.top_outlets;
+      const outletsHTML = outlets ? `
+        <div class="outlets-section">
+          <div class="outlets-title">Top News Sources</div>
+          ${Object.entries(outlets).slice(0, 5).map(([outlet, count]) => `
+            <div class="outlet-item">
+              <span class="outlet-name">${outlet}</span>
+              <span class="outlet-count">${count} articles</span>
+            </div>
+          `).join('')}
+        </div>
+      ` : '';
+
+      // Create bias distribution HTML
+      const biasDistHTML = `
+        <div class="country-distribution">
+          <div class="country-dist-title">Article Bias Distribution</div>
+          <div class="country-dist-bars">
+            <div class="country-dist-bar left-strong" style="height: ${(countryDist.farLeft / maxCountryCount) * 100}%">
+              ${countryDist.farLeft > 0 ? `<span class="country-dist-value">${countryDist.farLeft}</span>` : ''}
+            </div>
+            <div class="country-dist-bar left" style="height: ${(countryDist.left / maxCountryCount) * 100}%">
+              ${countryDist.left > 0 ? `<span class="country-dist-value">${countryDist.left}</span>` : ''}
+            </div>
+            <div class="country-dist-bar neutral" style="height: ${(countryDist.neutral / maxCountryCount) * 100}%">
+              ${countryDist.neutral > 0 ? `<span class="country-dist-value">${countryDist.neutral}</span>` : ''}
+            </div>
+            <div class="country-dist-bar right" style="height: ${(countryDist.right / maxCountryCount) * 100}%">
+              ${countryDist.right > 0 ? `<span class="country-dist-value">${countryDist.right}</span>` : ''}
+            </div>
+            <div class="country-dist-bar right-strong" style="height: ${(countryDist.farRight / maxCountryCount) * 100}%">
+              ${countryDist.farRight > 0 ? `<span class="country-dist-value">${countryDist.farRight}</span>` : ''}
+            </div>
+          </div>
+          <div class="country-dist-labels">
+            <span>L++</span>
+            <span>L</span>
+            <span>N</span>
+            <span>R</span>
+            <span>R++</span>
+          </div>
+          <div class="polarization-indicator ${polarizationClass}">
+            ${polarizationText}
+          </div>
+        </div>
+      `;
+
+      // Create headlines
+      const headlines = (detailData?.headlines || data.headlines || []).slice(0, 3).map(h => `
+        <div class="headline-item">
+          <a href="${h.u || h.url || h.title}" target="_blank" rel="noopener" class="headline-link">
+            ${h.t || h.title}
+          </a>
+        </div>
+      `).join('') || '<div class="no-data">No headlines available</div>';
+
+      panel.innerHTML = `
+        <div class="country-header">
+          <div class="country-name">${countryName || iso3}</div>
+          <div class="tilt-badge ${getTiltBadgeClass(data.tilt)}">
+            ${getTiltLabel(data.tilt)}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 12px;">
+          <div style="font-size: 14px; color: rgba(255, 255, 255, 0.7);">
+            Average Tilt: <strong style="color: #00d4ff;">${data.tilt.toFixed(2)}</strong>
+            <span style="font-size: 12px; color: rgba(255, 255, 255, 0.4);">
+              (−1 = far left, +1 = far right)
+            </span>
+          </div>
+          ${data.article_count || detailData?.statistics?.article_count ?
+            `<div class="article-count">Based on ${data.article_count || detailData.statistics.article_count} articles</div>` : ''}
+        </div>
+
+        ${biasDistHTML}
+        ${outletsHTML}
+
+        <div class="frames-section">
+          <div class="frames-title">Coverage Themes</div>
+          ${frameBars}
+        </div>
+
+        <div class="headlines-section">
+          <div class="headlines-title">Sample Headlines</div>
+          ${headlines}
+        </div>
+      `;
+    }
+
+    // Generate coverage summary for analytics
+    function generateCoverageSummary(data) {
+      const countries = Object.keys(data.countries || {});
+      const countryCount = countries.length;
+
+      if (countryCount === 0) return "No coverage data available.";
+
+      const tilts = countries.map(c => data.countries[c].tilt);
+      const avgTilt = tilts.reduce((a, b) => a + b, 0) / tilts.length;
+
+      // Count bias distribution
+      const leftCount = tilts.filter(t => t < -0.2).length;
+      const rightCount = tilts.filter(t => t > 0.2).length;
+      const neutralCount = countryCount - leftCount - rightCount;
+
+      // Determine overall narrative
+      let narrative = "balanced";
+      if (avgTilt < -0.2) narrative = "left-leaning";
+      else if (avgTilt > 0.2) narrative = "right-leaning";
+
+      // Calculate polarization
+      const variance = tilts.reduce((acc, t) => acc + Math.pow(t - avgTilt, 2), 0) / tilts.length;
+      const isPolarized = variance > 0.2;
+
+      return `
+        <div class="summary-text">
+          <span class="summary-highlight">${countryCount} countries</span> show
+          <span class="summary-highlight">${narrative}</span> coverage on "${data.topic}".
+          ${isPolarized ?
+            `Coverage is <span class="summary-highlight">highly polarized</span> with ${leftCount} left, ${neutralCount} neutral, and ${rightCount} right-leaning countries.` :
+            `Coverage is <span class="summary-highlight">relatively unified</span> across regions.`}
+        </div>
+      `;
+    }
+
+    // Update analytics panel with global statistics
+    function updateAnalytics(data) {
+      if (!data || !data.countries) return;
+
+      const panel = document.getElementById('analyticsPanel');
+      panel.classList.add('show');
+
+      // Update summary
+      document.getElementById('coverageSummary').innerHTML = generateCoverageSummary(data);
+
+      // Update distribution chart
+      const tilts = Object.values(data.countries).map(c => c.tilt);
+      const distribution = {
+        farLeft: tilts.filter(t => t <= -0.6).length,
+        left: tilts.filter(t => t > -0.6 && t <= -0.2).length,
+        neutral: tilts.filter(t => t > -0.2 && t < 0.2).length,
+        right: tilts.filter(t => t >= 0.2 && t < 0.6).length,
+        farRight: tilts.filter(t => t >= 0.6).length
+      };
+
+      const maxCount = Math.max(...Object.values(distribution), 1);
+
+      document.getElementById('distributionBars').innerHTML = `
+        <div class="dist-bar left-strong" style="height: ${(distribution.farLeft / maxCount) * 100}%">
+          <span class="dist-count">${distribution.farLeft}</span>
+        </div>
+        <div class="dist-bar left" style="height: ${(distribution.left / maxCount) * 100}%">
+          <span class="dist-count">${distribution.left}</span>
+        </div>
+        <div class="dist-bar neutral" style="height: ${(distribution.neutral / maxCount) * 100}%">
+          <span class="dist-count">${distribution.neutral}</span>
+        </div>
+        <div class="dist-bar right" style="height: ${(distribution.right / maxCount) * 100}%">
+          <span class="dist-count">${distribution.right}</span>
+        </div>
+        <div class="dist-bar right-strong" style="height: ${(distribution.farRight / maxCount) * 100}%">
+          <span class="dist-count">${distribution.farRight}</span>
+        </div>
+      `;
+
+      // Extract and display keywords from headlines
+      const allHeadlines = [];
+      Object.values(data.countries).forEach(country => {
+        if (country.headlines) {
+          country.headlines.forEach(h => allHeadlines.push(h.t || h.title));
+        }
+      });
+
+      // Simple keyword extraction
+      const keywords = {};
+      const stopWords = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+                        'of', 'with', 'by', 'as', 'is', 'was', 'are', 'were', 'been', 'be', 'said', 'says'];
+
+      allHeadlines.forEach(headline => {
+        if (headline) {
+          const words = headline.toLowerCase().split(/\W+/);
+          words.forEach(word => {
+            if (word.length > 3 && !stopWords.includes(word)) {
+              keywords[word] = (keywords[word] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      // Get top keywords
+      const topKeywords = Object.entries(keywords)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 15);
+
+      // Generate keyword cloud
+      document.getElementById('keywordCloud').innerHTML = topKeywords.map(([word, count], index) => {
+        let sizeClass = 'small';
+        if (index < 3) sizeClass = 'large';
+        else if (index < 8) sizeClass = 'medium';
+
+        return `<span class="keyword ${sizeClass}">${word}</span>`;
+      }).join('') || '<div class="no-data">No keywords available</div>';
+    }
+
+    // Load trending topics
+    async function loadTrendingTopics() {
+      try {
+        const response = await fetch('http://localhost:5000/api/trending');
+        let topics = [];
+
+        if (response.ok) {
+          const data = await response.json();
+          topics = data.topics || [];
+        }
+
+        // Fallback trending topics if API fails
+        if (topics.length === 0) {
+          topics = [
+            { name: "Ukraine", count: 15, hot: true },
+            { name: "Gaza", count: 12, hot: true },
+            { name: "Climate", count: 10, hot: false },
+            { name: "Economy", count: 8, hot: false },
+            { name: "AI", count: 7, hot: false },
+            { name: "Election", count: 6, hot: false }
+          ];
+        }
+
+        const container = document.getElementById('trendingTopics');
+        container.innerHTML = topics.map(topic => `
+          <div class="topic-chip ${topic.hot ? 'hot' : ''}" onclick="searchTopic('${topic.name}')">
+            <span>${topic.name}</span>
+            ${topic.count ? `<span class="topic-count">${topic.count}</span>` : ''}
+          </div>
+        `).join('');
+
+      } catch (error) {
+        console.log('Using fallback trending topics');
+        const container = document.getElementById('trendingTopics');
+        container.innerHTML = `
+          <div class="topic-chip hot" onclick="searchTopic('Ukraine')">
+            <span>Ukraine</span><span class="topic-count">15</span>
+          </div>
+          <div class="topic-chip hot" onclick="searchTopic('Gaza')">
+            <span>Gaza</span><span class="topic-count">12</span>
+          </div>
+          <div class="topic-chip" onclick="searchTopic('Climate')">
+            <span>Climate</span><span class="topic-count">10</span>
+          </div>
+          <div class="topic-chip" onclick="searchTopic('Economy')">
+            <span>Economy</span><span class="topic-count">8</span>
+          </div>
+          <div class="topic-chip" onclick="searchTopic('AI')">
+            <span>AI</span><span class="topic-count">7</span>
+          </div>
+        `;
+      }
+    }
+
+    // Load GeoJSON
+    async function loadGeoJSON() {
+      try {
+        const response = await fetch('/countries.geojson');
+
+        if (!response.ok) {
+          throw new Error('Failed to load GeoJSON');
+        }
+
+        const geoData = await response.json();
+
+        // Create GeoJSON layer with enhanced hover effects
+        geoJsonLayer = L.geoJSON(geoData, {
+          style: getCountryStyle,
+          onEachFeature: (feature, layer) => {
+            const iso3 = feature.properties?.ISO_A3;
+            const name = feature.properties?.NAME || feature.properties?.name || iso3;
+
+            layer.on({
+              mouseover: (e) => {
+                const hasData = currentData?.countries?.[iso3];
+                e.target.setStyle({
+                  weight: 2.5,
+                  color: '#00d4ff',
+                  fillOpacity: hasData ? 1 : 0.4
+                });
+                layer.bringToFront();
+              },
+              mouseout: (e) => {
+                geoJsonLayer.resetStyle(e.target);
+              },
+              click: () => {
+                showCountryDetails(iso3, name);
+              }
+            });
+
+            // Add tooltip
+            const countryData = currentData?.countries?.[iso3];
+            const tooltipText = countryData
+              ? `${name}<br>Tilt: ${countryData.tilt.toFixed(2)}`
+              : `${name}<br>No data`;
+            layer.bindTooltip(tooltipText, { sticky: true });
+          }
+        }).addTo(map);
+
+        // Load trending topics first
+        await loadTrendingTopics();
+
+        // Load initial global news data
+        await searchTopic('Ukraine'); // Start with a popular topic
+
+      } catch (error) {
+        console.error('Error loading GeoJSON:', error);
+
+        document.getElementById('panelContent').innerHTML = `
+          <div class="no-data">
+            <p style="color: #ff6666; font-weight: 600;">Error loading map data</p>
+            <p>Please ensure countries.geojson is available.</p>
+          </div>
+        `;
+      }
+    }
+
+    // Search for topic
+    async function searchTopic(query) {
+      if (!query) return;
+
+      // Update search input
+      document.getElementById('searchInput').value = query;
+
+      document.getElementById('loading').style.display = 'block';
+
+      try {
+        const response = await fetch(`http://localhost:5000/api/topic?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+
+        currentData = data;
+        currentTopic = query;
+
+        // Update analytics with the new data
+        updateAnalytics(data);
+
+        const url = new URL(window.location);
+        url.searchParams.set('q', query);
+        window.history.pushState({}, '', url);
+
+        const hasData = Object.keys(data.countries || {}).length > 0;
+        document.getElementById('panelContent').innerHTML = `
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 16px; font-weight: 600; color: #fff;">
+              Topic: <span style="color: #00d4ff;">${data.topic}</span>
+            </div>
+            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.4); margin-top: 4px;">
+              Search performed: ${new Date().toLocaleString()}
+            </div>
+          </div>
+          ${hasData ? `
+            <div style="color: rgba(255, 255, 255, 0.7); font-size: 14px;">
+              <p>Found data for <strong style="color: #00d4ff;">${Object.keys(data.countries).length}</strong> countries.</p>
+              <p style="margin-top: 8px;">Click on any colored country to see details.</p>
+            </div>
+          ` : `
+            <div class="no-data">
+              <p>No results found for "${query}"</p>
+              <p style="margin-top: 8px; font-size: 12px;">Try a different search term.</p>
+            </div>
+          `}
+        `;
+
+        if (geoJsonLayer) {
+          geoJsonLayer.eachLayer(layer => {
+            layer.setStyle(getCountryStyle(layer.feature));
+
+            const iso3 = layer.feature.properties?.ISO_A3;
+            const name = layer.feature.properties?.NAME || iso3;
+            const countryData = data.countries?.[iso3];
+            const tooltipText = countryData
+              ? `${name}<br>Tilt: ${countryData.tilt.toFixed(2)}`
+              : `${name}<br>No data`;
+            layer.setTooltipContent(tooltipText);
+          });
+        }
+
+      } catch (error) {
+        console.error('Search error:', error);
+        document.getElementById('panelContent').innerHTML = `
+          <div class="no-data">
+            <p style="color: #ff6666;">Search failed</p>
+            <p>Please try again later.</p>
+          </div>
+        `;
+      } finally {
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    // Show methodology
+    function showMethodology() {
+      document.getElementById('panelContent').innerHTML = `
+        <div style="font-size: 14px; line-height: 1.6; color: rgba(255, 255, 255, 0.7);">
+          <h3 style="font-size: 16px; font-weight: 600; margin-bottom: 12px; color: #00d4ff;">
+            How We Calculate Bias
+          </h3>
+
+          <div style="margin-bottom: 12px;">
+            <strong>Tilt Score (−1 to +1):</strong><br>
+            We analyze headlines for political language markers. Left-leaning terms
+            (e.g., "equality," "climate action") push the score negative, while
+            right-leaning terms (e.g., "freedom," "free market") push it positive.
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong>Frames:</strong><br>
+            We categorize coverage into six frames based on keyword analysis:
+            <ul style="margin-left: 20px; margin-top: 4px;">
+              <li>Economic (jobs, trade, markets)</li>
+              <li>Political (elections, policy)</li>
+              <li>Humanitarian (rights, aid)</li>
+              <li>Security (safety, defense)</li>
+              <li>Scientific (research, data)</li>
+              <li>Scandal (controversy, corruption)</li>
+            </ul>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <strong>Data Sources:</strong><br>
+            Headlines from major news outlets in each country, updated hourly.
+          </div>
+
+          <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+            <em style="font-size: 12px; color: rgba(255, 255, 255, 0.4);">
+              Note: These are automated estimates based on language analysis.
+            </em>
+          </div>
+
+          <button onclick="searchTopic(currentTopic)" style="margin-top: 12px; padding: 8px 16px; background: linear-gradient(135deg, #0096ff, #00d4ff); color: white; border: none; border-radius: 8px; cursor: pointer;">
+            ← Back to results
+          </button>
+        </div>
+      `;
+    }
+
+    // Initialize search functionality
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('searchInput');
+      const searchBtn = document.getElementById('searchBtn');
+
+      searchBtn.addEventListener('click', () => {
+        const query = searchInput.value.trim();
+        if (query) {
+          searchTopic(query);
+        }
+      });
+
+      searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          const query = searchInput.value.trim();
+          if (query) {
+            searchTopic(query);
+          }
+        }
+      });
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlQuery = urlParams.get('q');
+      if (urlQuery) {
+        searchInput.value = urlQuery;
+        currentTopic = urlQuery;
+      }
+
+      loadGeoJSON();
+    });
+
+    window.addEventListener('popstate', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const query = urlParams.get('q') || 'Ukraine';
+      document.getElementById('searchInput').value = query;
+      searchTopic(query);
+    });
+  </script>
+</body>
+</html>

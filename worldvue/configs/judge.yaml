@@ -1,0 +1,8 @@
+model: gpt-4o-mini
+temperature: 0.0
+max_tokens: 200
+response_format: json_object
+truncation: 500
+retry:
+  attempts: 3
+  backoff_seconds: 3

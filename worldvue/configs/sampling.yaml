@@ -1,0 +1,6 @@
+total_pairs: 200
+calibration: 100
+uncertainty: 50
+test: 50
+min_pairs_per_cluster: 2
+random_seed: 17

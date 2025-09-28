@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WorldVue AI - Monitoring Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 100%);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00d4ff, #0096ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            color: #888;
+            margin-bottom: 30px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 168, 255, 0.2);
+        }
+        
+        .card h2 {
+            font-size: 1.2rem;
+            color: #00d4ff;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-online {
+            background: #00ff88;
+            box-shadow: 0 0 10px #00ff88;
+        }
+        
+        .status-offline {
+            background: #ff4444;
+            box-shadow: 0 0 10px #ff4444;
+        }
+        
+        .status-warning {
+            background: #ffaa00;
+            box-shadow: 0 0 10px #ffaa00;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metric:last-child {
+            border-bottom: none;
+        }
+        
+        .metric-label {
+            color: #888;
+        }
+        
+        .metric-value {
+            font-weight: 600;
+            color: #fff;
+        }
+        
+        .metric-value.large {
+            font-size: 2rem;
+            color: #00d4ff;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0096ff);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        
+        .log-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .log-time {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        .log-success {
+            color: #00ff88;
+        }
+        
+        .log-error {
+            color: #ff4444;
+        }
+        
+        .log-info {
+            color: #00d4ff;
+        }
+        
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+        
+        .country-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .country-item {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .country-count {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #00d4ff;
+        }
+        
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #00d4ff, #0096ff);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0, 168, 255, 0.4);
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .alert {
+            padding: 15px;
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .alert.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #00d4ff;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .feed-status {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .feed-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.02);
+            margin-bottom: 2px;
+            border-radius: 4px;
+        }
+        
+        .feed-item.success {
+            border-left: 3px solid #00ff88;
+        }
+        
+        .feed-item.error {
+            border-left: 3px solid #ff4444;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌍 WorldVue AI Monitoring Dashboard</h1>
+        <p class="subtitle">Real-time system monitoring and analytics</p>
+        
+        <div class="alert" id="alertBox">
+            <strong>Alert:</strong> <span id="alertMessage"></span>
+        </div>
+        
+        <div class="control-panel">
+            <button onclick="refreshData()">🔄 Refresh</button>
+            <button onclick="startFetch()" id="fetchBtn">▶️ Start Fetch</button>
+            <button onclick="clearCache()">🗑️ Clear Cache</button>
+            <button onclick="toggleAutoRefresh()" id="autoRefreshBtn">🔁 Auto-Refresh: OFF</button>
+        </div>
+        
+        <div class="grid">
+            <!-- System Status -->
+            <div class="card">
+                <h2>
+                    <span class="status-indicator status-online" id="systemStatus"></span>
+                    System Status
+                </h2>
+                <div class="metric">
+                    <span class="metric-label">API Server</span>
+                    <span class="metric-value" id="apiStatus">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Database</span>
+                    <span class="metric-value" id="dbStatus">Checking...</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last Update</span>
+                    <span class="metric-value" id="lastUpdate">Never</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Uptime</span>
+                    <span class="metric-value" id="uptime">0h 0m</span>
+                </div>
+            </div>
+            
+            <!-- Database Stats -->
+            <div class="card">
+                <h2>📊 Database Statistics</h2>
+                <div class="metric">
+                    <span class="metric-label">Total Articles</span>
+                    <span class="metric-value large" id="totalArticles">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last 24 Hours</span>
+                    <span class="metric-value" id="last24h">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Last 7 Days</span>
+                    <span class="metric-value" id="last7d">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Growth Rate</span>
+                    <span class="metric-value" id="growthRate">+0%</span>
+                </div>
+            </div>
+            
+            <!-- Performance -->
+            <div class="card">
+                <h2>⚡ Performance</h2>
+                <div class="metric">
+                    <span class="metric-label">API Response Time</span>
+                    <span class="metric-value" id="responseTime">0ms</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cache Hit Rate</span>
+                    <span class="metric-value" id="cacheHitRate">0%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cache Entries</span>
+                    <span class="metric-value" id="cacheEntries">0</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Memory Usage</span>
+                    <span class="metric-value" id="memoryUsage">0 MB</span>
+                </div>
+            </div>
+            
+            <!-- Feed Status -->
+            <div class="card">
+                <h2>📰 Feed Processing</h2>
+                <div class="metric">
+                    <span class="metric-label">Total Feeds</span>
+                    <span class="metric-value" id="totalFeeds">300+</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Processing Rate</span>
+                    <span class="metric-value" id="processingRate">0 feeds/min</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Success Rate</span>
+                    <span class="metric-value" id="successRate">0%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressBar" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Country Coverage -->
+            <div class="card" style="grid-column: span 2;">
+                <h2>🗺️ Country Coverage</h2>
+                <div class="metric">
+                    <span class="metric-label">Active Countries</span>
+                    <span class="metric-value" id="activeCountries">0</span>
+                </div>
+                <div class="country-list" id="countryList">
+                    <!-- Countries will be populated here -->
+                </div>
+            </div>
+            
+            <!-- Trending Topics -->
+            <div class="card">
+                <h2>🔥 Trending Topics</h2>
+                <div id="trendingTopics">
+                    <div class="spinner"></div> Loading...
+                </div>
+            </div>
+            
+            <!-- Recent Activity Log -->
+            <div class="card" style="grid-column: span 2;">
+                <h2>📜 Activity Log</h2>
+                <div class="log-container" id="activityLog">
+                    <div class="log-entry">
+                        <span class="log-time">00:00:00</span>
+                        <span class="log-info">System initialized</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuration
+        const API_BASE = 'http://localhost:5000/api';
+        let autoRefresh = false;
+        let refreshInterval = null;
+        let startTime = Date.now();
+        
+        // Add log entry
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('activityLog');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-${type}">${message}</span>
+            `;
+            log.insertBefore(entry, log.firstChild);
+            
+            // Keep only last 50 entries
+            while (log.children.length > 50) {
+                log.removeChild(log.lastChild);
+            }
+        }
+        
+        // Fetch API status
+        async function fetchStatus() {
+            const startTime = Date.now();
+            
+            try {
+                const response = await fetch(`${API_BASE}/status`);
+                const data = await response.json();
+                
+                // Calculate response time
+                const responseTime = Date.now() - startTime;
+                document.getElementById('responseTime').textContent = `${responseTime}ms`;
+                
+                // Update system status
+                document.getElementById('systemStatus').className = 'status-indicator status-online';
+                document.getElementById('apiStatus').textContent = 'Online';
+                document.getElementById('dbStatus').textContent = data.database ? 'Connected' : 'Disconnected';
+                
+                // Update database stats
+                if (data.database) {
+                    document.getElementById('totalArticles').textContent = 
+                        (data.database.total_articles || 0).toLocaleString();
+                }
+                
+                if (data.recent_activity) {
+                    document.getElementById('last24h').textContent = 
+                        (data.recent_activity.last_24h || 0).toLocaleString();
+                    document.getElementById('last7d').textContent = 
+                        (data.recent_activity.last_week || 0).toLocaleString();
+                    
+                    // Calculate growth rate
+                    const daily = data.recent_activity.last_24h || 0;
+                    const weekly = data.recent_activity.last_week || 0;
+                    const growthRate = weekly > 0 ? ((daily / (weekly/7)) * 100 - 100).toFixed(1) : 0;
+                    document.getElementById('growthRate').textContent = 
+                        growthRate > 0 ? `+${growthRate}%` : `${growthRate}%`;
+                }
+                
+                // Update cache stats
+                if (data.cache) {
+                    document.getElementById('cacheEntries').textContent = data.cache.entries || 0;
+                }
+                
+                // Update countries
+                if (data.top_countries) {
+                    updateCountryList(data.top_countries);
+                }
+                
+                addLog('Status updated successfully', 'success');
+                
+            } catch (error) {
+                document.getElementById('systemStatus').className = 'status-indicator status-offline';
+                document.getElementById('apiStatus').textContent = 'Offline';
+                document.getElementById('dbStatus').textContent = 'Unknown';
+                addLog('Failed to fetch status: ' + error.message, 'error');
+            }
+            
+            // Update last update time
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+        }
+        
+        // Fetch trending topics
+        async function fetchTrending() {
+            try {
+                const response = await fetch(`${API_BASE}/trending`);
+                const data = await response.json();
+                
+                const container = document.getElementById('trendingTopics');
+                
+                if (data.topics && data.topics.length > 0) {
+                    container.innerHTML = data.topics.slice(0, 10).map(topic => `
+                        <div class="metric">
+                            <span class="metric-label">${topic.name}</span>
+                            <span class="metric-value">${topic.count}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p style="color: #888;">No trending topics available</p>';
+                }
+                
+            } catch (error) {
+                document.getElementById('trendingTopics').innerHTML = 
+                    '<p style="color: #ff4444;">Failed to load trending topics</p>';
+            }
+        }
+        
+        // Update country list
+        function updateCountryList(countries) {
+            const container = document.getElementById('countryList');
+            
+            if (!countries || countries.length === 0) {
+                container.innerHTML = '<p style="color: #888;">No country data available</p>';
+                return;
+            }
+            
+            container.innerHTML = countries.slice(0, 20).map(country => `
+                <div class="country-item">
+                    <div>${country.country || country.source_country}</div>
+                    <div class="country-count">${country.article_count || 0}</div>
+                </div>
+            `).join('');
+            
+            document.getElementById('activeCountries').textContent = countries.length;
+        }
+        
+        // Update uptime
+        function updateUptime() {
+            const uptime = Date.now() - startTime;
+            const hours = Math.floor(uptime / 3600000);
+            const minutes = Math.floor((uptime % 3600000) / 60000);
+            document.getElementById('uptime').textContent = `${hours}h ${minutes}m`;
+        }
+        
+        // Refresh all data
+        async function refreshData() {
+            addLog('Refreshing data...', 'info');
+            await Promise.all([
+                fetchStatus(),
+                fetchTrending()
+            ]);
+            updateUptime();
+        }
+        
+        // Toggle auto-refresh
+        function toggleAutoRefresh() {
+            autoRefresh = !autoRefresh;
+            const btn = document.getElementById('autoRefreshBtn');
+            
+            if (autoRefresh) {
+                btn.textContent = '🔁 Auto-Refresh: ON';
+                btn.style.background = 'linear-gradient(135deg, #00ff88, #00d4ff)';
+                refreshInterval = setInterval(refreshData, 10000); // Every 10 seconds
+                addLog('Auto-refresh enabled', 'info');
+            } else {
+                btn.textContent = '🔁 Auto-Refresh: OFF';
+                btn.style.background = 'linear-gradient(135deg, #00d4ff, #0096ff)';
+                clearInterval(refreshInterval);
+                addLog('Auto-refresh disabled', 'info');
+            }
+        }
+        
+        // Clear cache
+        async function clearCache() {
+            try {
+                const response = await fetch(`${API_BASE}/cache/clear`, { method: 'POST' });
+                if (response.ok) {
+                    addLog('Cache cleared successfully', 'success');
+                    await refreshData();
+                } else {
+                    addLog('Failed to clear cache', 'error');
+                }
+            } catch (error) {
+                addLog('Error clearing cache: ' + error.message, 'error');
+            }
+        }
+        
+        // Start fetch process (placeholder - would need backend endpoint)
+        function startFetch() {
+            const btn = document.getElementById('fetchBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Fetching...';
+            
+            addLog('Fetch process started (simulated)', 'info');
+            
+            // Simulate progress
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 10;
+                if (progress >= 100) {
+                    progress = 100;
+                    clearInterval(progressInterval);
+                    btn.disabled = false;
+                    btn.innerHTML = '▶️ Start Fetch';
+                    addLog('Fetch process completed', 'success');
+                    refreshData();
+                }
+                document.getElementById('progressBar').style.width = progress + '%';
+            }, 1000);
+        }
+        
+        // Initialize dashboard
+        async function init() {
+            addLog('Dashboard initialized', 'info');
+            await refreshData();
+            
+            // Update uptime every minute
+            setInterval(updateUptime, 60000);
+        }
+        
+        // Start when page loads
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

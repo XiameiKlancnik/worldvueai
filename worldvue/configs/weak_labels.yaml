@@ -1,0 +1,35 @@
+axes:
+  - one_sidedness
+  - hype
+  - sourcing
+  - fight_vs_fix
+  - certain_vs_caution
+
+labeling_functions:
+  one_sidedness:
+    - name: quote_balance
+      module: worldvue.weak.labelers:QuoteBalanceLabeler
+      weight: 1.0
+    - name: hedge_presence
+      module: worldvue.weak.labelers:HedgingLabeler
+      weight: 0.8
+  hype:
+    - name: punctuation_intensity
+      module: worldvue.weak.labelers:HypeLabeler
+      weight: 1.0
+  sourcing:
+    - name: citation_density
+      module: worldvue.weak.labelers:SourcingLabeler
+      weight: 1.0
+  fight_vs_fix:
+    - name: actionability
+      module: worldvue.weak.labelers:FixItLabeler
+      weight: 0.9
+  certain_vs_caution:
+    - name: certainty_terms
+      module: worldvue.weak.labelers:CertaintyLabeler
+      weight: 1.0
+
+thresholds:
+  tie_margin: 0.1
+  high_confidence: 0.8

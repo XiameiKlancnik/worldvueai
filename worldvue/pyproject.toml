@@ -1,0 +1,59 @@
+[tool.poetry]
+name = "worldvue"
+version = "0.1.0"
+description = "Production-ready news bias detection system with weak supervision and LLM calibration."
+authors = ["WorldVue AI <engineering@worldvue.ai>"]
+readme = "README.md"
+packages = [{ include = "worldvue", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pandas = "^2.2.0"
+numpy = "^1.26"
+scipy = "^1.12"
+scikit-learn = "^1.4"
+sentence-transformers = "^2.5.1"
+lightgbm = { version = "^4.1", optional = true }
+typer = "^0.12.4"
+rich = "^13.7"
+pydantic = "^1.10"
+langdetect = "^1.0.9"
+hdbscan = { version = "^0.8.33", optional = true }
+openai = "^1.42.0"
+python-dotenv = "^1.0.1"
+joblib = "^1.4"
+click = "^8.1.0"
+torch = "^2.0.0"
+transformers = "^4.35.0"
+pyyaml = "^6.0"
+tqdm = "^4.66.0"
+
+[tool.poetry.extras]
+clustering = ["hdbscan"]
+gpu = []
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3"
+pytest-cov = "^4.1"
+black = "^24.8"
+isort = "^5.13"
+mypy = "^1.11"
+
+[tool.poetry.scripts]
+worldvue = "worldvue.cli.main:cli"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra"
+testpaths = ["tests"]
+
+[build-system]
+requires = ["poetry-core>=1.8.0"]
+build-backend = "poetry.core.masonry.api"

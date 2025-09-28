@@ -1,0 +1,20 @@
+nul
+
+# Large files and data
+*.csv
+*.parquet
+*.db
+*.joblib
+*.pkl
+
+# Model and artifact directories
+artifacts/
+artifacts_backup/
+artifacts_run_*/
+experiments/
+model_cache/
+embeddings_cache.pkl
+
+# Jupyter notebooks (often contain large outputs)
+*.ipynb
+.env

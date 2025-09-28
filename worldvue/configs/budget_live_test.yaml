@@ -1,0 +1,32 @@
+seed: 42
+
+# Article sampling - VERY SMALL TEST
+max_articles_global: 100           # tiny for live testing
+max_articles_per_country: 10       # cap to spread breadth
+country_whitelist: []              # optional subset; empty = all
+cluster_min_size: 3                # clusters smaller than this are skipped
+
+# Pair sampling - VERY SMALL TEST
+target_pairs_total: 50             # tiny for live testing
+cross_country_ratio: 0.40          # 60% within, 40% cross-country
+pairs_per_cluster_min: 2
+pairs_per_cluster_max: 10
+max_pairs_per_article: 4           # target "degree" for BT solver
+balance_by_outlet: true
+
+# LLM judging
+votes_per_pair: 1                  # reduced for testing
+truncate_chars_per_side: 800       # shorter for testing
+pivot_language: "en"               # translate both sides to this for judging
+use_translation: true
+entity_masking: true
+
+# Cost estimator
+price_per_mtoken_usd: 0.15
+tokens_per_call_estimate: 800      # conservative; used for planning
+dry_run: false                     # LIVE CALLS for testing
+
+# Scoring/calibration
+scoring_method: "anchors"          # "anchors" | "bt_offsets"
+anchors_per_axis: 3                # fewer anchors for testing
+country_isotonic_calibration: false  # disable for small test
