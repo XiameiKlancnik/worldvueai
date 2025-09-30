@@ -21,6 +21,7 @@ from .commands.train import train
 from .commands.score import score
 from .commands.eval import eval
 from .commands.run import run
+from .commands.topic import topic
 
 
 @click.group()
@@ -38,6 +39,7 @@ cli.add_command(train)
 cli.add_command(score)
 cli.add_command(eval)
 cli.add_command(run)
+cli.add_command(topic)
 
 
 @cli.command()
@@ -47,13 +49,14 @@ cli.add_command(run)
               help='Embedding cache path')
 @click.option('--refresh', is_flag=True, help='Recompute embeddings even if cached')
 @click.option('--batch-size', type=int, default=32, help='Encoding batch size')
-def embed(input, cache, refresh, batch_size):
+@click.option('--num-workers', type=int, default=0, help='Number of dataloader workers for encoding')
+def embed(input, cache, refresh, batch_size, num_workers):
     """Encode articles with multilingual sentence transformer."""
     click.echo('Loading articles...')
     articles = load_articles(Path(input))
     for article in articles:
         article.text = basic_clean(article.text)
-    encoder = EmbeddingEncoder(cache_path=str(cache))
+    encoder = EmbeddingEncoder(cache_path=str(cache), num_workers=num_workers)
     results = encoder.encode_articles(articles, batch_size=batch_size, refresh=refresh)
     click.echo(f'Encoded {len(results)} articles (refresh={refresh}). Cache -> {cache}')
 
@@ -72,7 +75,7 @@ def cluster(input, cache, min_size, deduplicate, output):
     """Cluster articles by embedding proximity (legacy command)."""
     click.echo('Loading articles and embeddings...')
     articles = load_articles(Path(input))
-    encoder = EmbeddingEncoder(cache_path=str(cache))
+    encoder = EmbeddingEncoder(cache_path=str(cache), num_workers=num_workers)
     encoder.encode_articles(articles, refresh=False)
     working = articles
     if deduplicate:
@@ -89,3 +92,4 @@ if __name__ == '__main__':
 
 
 __all__ = ['cli']
+

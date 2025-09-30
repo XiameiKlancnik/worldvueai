@@ -16,7 +16,7 @@ pivot_language: en
 price_per_mtoken_usd: 0.15  # GPT-4o-mini pricing: $0.15/1M input, $0.60/1M output
 scoring_method: anchors
 seed: 42
-target_pairs_total: 10000  # BIG RUN - maximum training data
+target_pairs_total: 1000  # BIG RUN - maximum training data
 tokens_per_call_estimate: 800  # Reduced due to shorter prompts
 truncate_chars_per_side: 1500  # Good context length
 use_cheaper_model: true  # Use gpt-4o-mini (cheapest option)

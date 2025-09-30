@@ -83,7 +83,7 @@ class CrossEncoder(nn.Module):
         pooled = self.dropout(pooled)
         logits = self.classifier(pooled)
         probs = self.sigmoid(logits)
-        return probs.squeeze()
+        return probs.squeeze(-1)
 
 
 class CrossEncoderTrainer:

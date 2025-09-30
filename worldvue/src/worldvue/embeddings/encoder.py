@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Iterable, List, Optional
 
 import numpy as np
+import inspect
 
 from worldvue.data.types import Article
 from worldvue.embeddings.store import attach_embeddings, load_store, persist_store
@@ -34,12 +35,14 @@ class EmbeddingEncoder:
         model_name: str = DEFAULT_MODEL,
         *,
         cache_path: str | None = None,
+        num_workers: int = 0,
     ) -> None:
         self.model_name = model_name
         self.cache_path = cache_path
         self._model: Optional[SentenceTransformer] = None
         self._vectorizer = None
         self._store = load_store(cache_path) if cache_path else load_store()
+        self.num_workers = num_workers
 
     @property
     def model(self):
@@ -62,7 +65,13 @@ class EmbeddingEncoder:
             vectorizer = self._vectorizer_model()
             matrix = vectorizer.fit_transform(texts)
             return matrix.toarray()
-        return np.asarray(self.model.encode(texts, batch_size=batch_size, show_progress_bar=False))
+        encode_sig = inspect.signature(self.model.encode)
+        kwargs = {'batch_size': batch_size, 'show_progress_bar': False}
+        if self.num_workers and 'num_workers' in encode_sig.parameters:
+            kwargs['num_workers'] = self.num_workers
+        elif self.num_workers:
+            print('SentenceTransformer.encode does not support num_workers; ignoring flag.')
+        return np.asarray(self.model.encode(texts, **kwargs))
 
     def encode_articles(
         self,
